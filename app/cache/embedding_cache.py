@@ -15,20 +15,28 @@ from app.config import get_settings
 
 
 class EmbeddingCache:
-    """Embedding 向量缓存。"""
+    """Embedding 向量缓存。
+
+    model_id 用于隔离不同 embedding 模型（维度不同）的缓存，避免切换模型后
+    命中错误维度的旧向量。未指定时退化为不带 model_id 的 key（向后兼容）。
+    """
 
     def __init__(
         self,
         client: redis.Redis,
         ttl: int | None = None,
         prefix: str = "emb",
+        model_id: str = "",
     ) -> None:
         self.client = client
         self.ttl = ttl or get_settings().embedding_cache_ttl
         self.prefix = prefix
+        self.model_id = model_id
 
     def _key(self, text: str) -> str:
         h = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        if self.model_id:
+            return f"{self.prefix}:{self.model_id}:{h}"
         return f"{self.prefix}:{h}"
 
     def get(self, text: str) -> list[float] | None:

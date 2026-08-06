@@ -9,11 +9,14 @@ import pytest
 @pytest.fixture(autouse=True)
 def reset_settings_cache():
     """每个测试前后清除 get_settings 缓存，保证环境变量改动生效。"""
+    from app.api.deps import clear_component_cache
     from app.config import get_settings
 
     get_settings.cache_clear()
+    clear_component_cache()
     yield
     get_settings.cache_clear()
+    clear_component_cache()
 
 
 @pytest.fixture

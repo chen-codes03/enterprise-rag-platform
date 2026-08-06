@@ -42,3 +42,27 @@ def test_factory_returns_fake_provider(isolated_env, monkeypatch):
 def test_fake_provider_from_settings():
     provider = FakeProvider.from_settings()
     assert isinstance(provider, FakeProvider)
+
+
+def test_fake_provider_survives_repeated_calls_under_singleton():
+    """单例 provider 下，多次同步/流式调用不应耗尽底层迭代器。"""
+    import asyncio
+
+    provider = FakeProvider()
+    # 同步调用两次
+    assert provider.chat([Message(role="human", content="Q1")]).content
+    assert provider.chat([Message(role="human", content="Q2")]).content
+
+    # 流式调用（同步调用之后，验证迭代器未耗尽）
+    async def _run():
+        out = []
+        async for chunk in provider.stream([Message(role="human", content="Q3")]):
+            out.append(chunk)
+        return out
+
+    chunks = asyncio.run(_run())
+    assert len(chunks) >= 2
+    assert chunks[-1].done is True
+
+    # 再次同步调用，仍应正常（迭代器未耗尽）
+    assert provider.chat([Message(role="human", content="Q4")]).content

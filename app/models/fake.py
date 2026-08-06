@@ -6,6 +6,8 @@ GenericFakeChatModel 返回固定/回显式回答，配合 fake embedding 可在
 """
 from __future__ import annotations
 
+from itertools import cycle
+
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 
 from app.config import Settings, get_settings
@@ -27,8 +29,8 @@ class FakeProvider(_LangChainProvider):
 
     @staticmethod
     def build_llm(settings: Settings) -> GenericFakeChatModel:
-        # GenericFakeChatModel 持续产出给定消息，满足同步/异步/流式三种调用
-        return GenericFakeChatModel(messages=iter([FakeProvider.DEFAULT_REPLY]))
+        # 用 cycle 无限循环，避免单例 provider 下多次调用耗尽迭代器
+        return GenericFakeChatModel(messages=cycle([FakeProvider.DEFAULT_REPLY]))
 
     @classmethod
     def from_settings(cls, settings: Settings | None = None) -> "FakeProvider":

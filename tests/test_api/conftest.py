@@ -6,7 +6,7 @@ from langchain_core.language_models.fake_chat_models import (
 )
 from langchain_core.messages import AIMessage
 
-from app.api.deps import get_qa_cache, get_rag_chain, get_store
+from app.api.deps import get_qa_cache, get_rag_chain, get_redis_dep, get_store
 from app.cache.qa_cache import QACache
 from app.config import get_settings
 from app.main import create_app
@@ -33,6 +33,7 @@ def api_client(kb_store, redis_client, monkeypatch):
     app.dependency_overrides[get_rag_chain] = lambda: chain
     app.dependency_overrides[get_store] = lambda: kb_store
     app.dependency_overrides[get_qa_cache] = lambda: QACache(redis_client)
+    app.dependency_overrides[get_redis_dep] = lambda: redis_client
 
     with TestClient(app) as client:
         yield client
