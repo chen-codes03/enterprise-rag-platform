@@ -18,9 +18,7 @@ services:
     env_file:
       - .env  # 从 .env 文件加载真实大模型 API key 等配置（.env 已被 .gitignore 忽略）
     environment:
-      # ===== 大模型：默认 fake 离线演示；在 .env 中设 MODEL_PROVIDER=deepseek + DEEPSEEK_API_KEY 启用真实大模型 =====
-      - EMBEDDING_PROVIDER=fake
-      - EMBEDDING_DIMENSION=32
+      # ===== Embedding / 大模型：由 .env 控制；无 .env 时默认 fake 演示模式 =====
       # ===== 鉴权（演示用，生产请通过 .env 注入强密钥）=====
       - API_KEY=sk-rag-demo-key-change-me
       # ===== 基础设施 =====

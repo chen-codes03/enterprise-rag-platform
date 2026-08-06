@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import hashlib
+import warnings
 
 from langchain_core.embeddings import Embeddings
 from langchain_openai import OpenAIEmbeddings
@@ -34,9 +35,22 @@ class DeterministicEmbeddings(Embeddings):
 
 
 def get_embeddings(settings: Settings | None = None) -> Embeddings:
-    """根据配置返回 Embedding 实例。"""
+    """根据配置返回 Embedding 实例。
+
+    若配置了 openai 但未填写 API key，自动降级到 fake 演示模式。
+    """
     settings = settings or get_settings()
     provider = settings.embedding_provider
+
+    # Fallback：配置了 openai embedding 但缺 API key → 降级到 fake
+    if provider == "openai" and not settings.embedding_api_key:
+        warnings.warn(
+            "EMBEDDING_PROVIDER=openai 但未配置 EMBEDDING_API_KEY，"
+            "自动降级到 fake 确定性哈希向量。请在 .env 中设置 API key 以启用真实 Embedding。",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        return DeterministicEmbeddings(dim=settings.embedding_dimension)
 
     if provider == "fake":
         return DeterministicEmbeddings(dim=settings.embedding_dimension)
