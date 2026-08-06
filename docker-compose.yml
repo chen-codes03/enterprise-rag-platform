@@ -15,9 +15,10 @@ services:
     build: .
     ports:
       - "8010:8000"  # 避免与本机 8000 冲突
+    env_file:
+      - .env  # 从 .env 文件加载真实大模型 API key 等配置（.env 已被 .gitignore 忽略）
     environment:
-      # ===== 离线演示模式：无需真实大模型 API key 即可端到端跑通 =====
-      - MODEL_PROVIDER=fake
+      # ===== 大模型：默认 fake 离线演示；在 .env 中设 MODEL_PROVIDER=deepseek + DEEPSEEK_API_KEY 启用真实大模型 =====
       - EMBEDDING_PROVIDER=fake
       - EMBEDDING_DIMENSION=32
       # ===== 鉴权（演示用，生产请通过 .env 注入强密钥）=====

@@ -5,6 +5,8 @@
 """
 from __future__ import annotations
 
+import warnings
+
 from app.config import Settings, get_settings
 from app.models.base import ModelProvider
 from app.models.deepseek import DeepSeekProvider
@@ -18,11 +20,34 @@ _PROVIDERS: dict[str, type] = {
     "fake": FakeProvider,
 }
 
+# 各 provider 对应的 api_key 字段名，用于 fallback 检测
+_PROVIDER_API_KEY_FIELD: dict[str, str] = {
+    "deepseek": "deepseek_api_key",
+    "qwen": "qwen_api_key",
+}
+
 
 def get_model_provider(settings: Settings | None = None) -> ModelProvider:
-    """根据配置返回模型 provider 实例。"""
+    """根据配置返回模型 provider 实例。
+
+    若配置了真实大模型（deepseek/qwen）但未填写 API key，
+    自动降级到 fake 演示模式，避免启动后调用失败。
+    """
     settings = settings or get_settings()
     provider_name = settings.model_provider
+
+    # Fallback：配置了真实大模型但缺 API key → 降级到 fake
+    api_key_field = _PROVIDER_API_KEY_FIELD.get(provider_name)
+    if api_key_field and not getattr(settings, api_key_field, ""):
+        warnings.warn(
+            f"MODEL_PROVIDER={provider_name} 但未配置 API key，"
+            f"自动降级到 fake 演示模式。请在 .env 中配置 "
+            f"{api_key_field.upper()} 以启用真实大模型。",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        provider_name = "fake"
+
     cls = _PROVIDERS.get(provider_name)
     if cls is None:
         raise ValueError(
