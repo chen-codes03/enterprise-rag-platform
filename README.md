@@ -120,7 +120,7 @@ app/
 ├── api/               FastAPI 路由、鉴权、Schemas
 └── evaluation/        评估指标、数据集、运行器
 scripts/               评估演示、部署验证脚本
-tests/                 单元/集成测试（134 项，全程 TDD）
+tests/                 单元/集成测试（144 项，全程 TDD）
 ```
 
 ## 测试
@@ -129,5 +129,22 @@ pytest                  # 全量测试
 pytest --cov=app        # 带覆盖率
 ```
 测试全程使用 FakeLLM / fakeredis / 临时 Chroma 目录，不依赖真实 API。
+
+## 已知安全注意事项
+
+经 TRAE-security-review 审查，以下为已知待改进项（演示项目优先级低，生产部署前应处理）：
+
+| 项 | 说明 | 建议 |
+|----|------|------|
+| 默认 API Key | `config.py` 与 `docker-compose.yml` 含默认密钥 `sk-rag-demo-key-change-me`，部署方未修改则等于无鉴权 | 生产强制覆盖 `API_KEY`，缺失则启动失败 |
+| 密钥比较 | `verify_api_key` 用 `!=` 比较，非常量时间 | 改用 `secrets.compare_digest` |
+| Redis 暴露 | `docker-compose.yml` 将 redis 端口映射至宿主机且无密码 | 生产移除端口映射或启用 `requirepass` |
+
+## 开发过程
+
+- **方法**：TDD（Red → Green → Refactor），7 个阶段（P0–P6）逐阶段提交验证
+- **审查**：TRAE-code-review（发现 5 项，修复 A/B/C 三项 major）+ TRAE-security-review（发现 3 项，记录待改进）
+- **评估**：`python -m scripts.run_evaluation` 跑 RAG vs 基线对比
+- **部署验证**：`python -m scripts.verify_deploy` 端到端验证健康检查/上传/问答/SSE
 
 详细目标见 [GOAL.md](GOAL.md)，实施计划见 [PLAN.md](PLAN.md)。
