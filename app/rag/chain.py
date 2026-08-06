@@ -13,6 +13,7 @@ from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_core.output_parsers import StrOutputParser
 
+from app.cache.qa_cache import QACache
 from app.config import get_settings
 from app.models.base import ModelProvider
 from app.rag.context import build_context, build_sources
@@ -36,10 +37,14 @@ class RAGChain:
         store: Chroma,
         model_provider: ModelProvider,
         top_k: int | None = None,
+        qa_cache: QACache | None = None,
+        kb: str = "default",
     ) -> None:
         self.store = store
         self.model_provider = model_provider
         self.top_k = top_k or get_settings().retrieve_top_k
+        self.qa_cache = qa_cache  # 可插拔缓存，None 表示不缓存
+        self.kb = kb
         # LCEL 生成链：prompt | llm | 解析为字符串
         self._answer_chain = (
             get_rag_prompt() | model_provider.llm | StrOutputParser()
@@ -50,27 +55,56 @@ class RAGChain:
         return retrieve(self.store, query, k=self.top_k)
 
     def ask(self, query: str) -> RAGAnswer:
-        """同步问答。"""
+        """同步问答。命中缓存则直接返回，否则计算并回填缓存。"""
+        if self.qa_cache is not None:
+            cached = self.qa_cache.get(query, kb=self.kb)
+            if cached is not None:
+                return RAGAnswer(
+                    answer=cached["answer"], sources=cached["sources"]
+                )
         docs = self.retrieve(query)
         context = build_context(docs)
         answer = self._answer_chain.invoke(
             {"context": context, "question": query}
         )
-        return RAGAnswer(answer=answer, sources=build_sources(docs))
+        result = RAGAnswer(answer=answer, sources=build_sources(docs))
+        if self.qa_cache is not None:
+            self.qa_cache.set(
+                query,
+                {"answer": result.answer, "sources": result.sources},
+                kb=self.kb,
+            )
+        return result
 
     async def async_ask(self, query: str) -> RAGAnswer:
-        """异步问答。"""
+        """异步问答。命中缓存则直接返回，否则计算并回填缓存。"""
+        if self.qa_cache is not None:
+            cached = self.qa_cache.get(query, kb=self.kb)
+            if cached is not None:
+                return RAGAnswer(
+                    answer=cached["answer"], sources=cached["sources"]
+                )
         docs = self.retrieve(query)
         context = build_context(docs)
         answer = await self._answer_chain.ainvoke(
             {"context": context, "question": query}
         )
-        return RAGAnswer(answer=answer, sources=build_sources(docs))
+        result = RAGAnswer(answer=answer, sources=build_sources(docs))
+        if self.qa_cache is not None:
+            self.qa_cache.set(
+                query,
+                {"answer": result.answer, "sources": result.sources},
+                kb=self.kb,
+            )
+        return result
 
     async def astream(
         self, query: str, docs: list[Document] | None = None
     ) -> AsyncIterator[str]:
-        """流式输出回答（逐 token）。可传入预检索 docs 避免重复检索。"""
+        """流式输出回答（逐 token）。可传入预检索 docs 避免重复检索。
+
+        注：流式路径不经过 QA 缓存，适用于实时交互场景。
+        """
         if docs is None:
             docs = self.retrieve(query)
         context = build_context(docs)

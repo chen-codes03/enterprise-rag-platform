@@ -37,6 +37,14 @@ def isolated_env(monkeypatch):
 
 
 @pytest.fixture
+def redis_client():
+    """基于 fakeredis 的 Redis 客户端，测试用，无需真实 Redis。"""
+    import fakeredis
+
+    return fakeredis.FakeRedis(decode_responses=True)
+
+
+@pytest.fixture
 def kb_store(tmp_chroma_dir):
     """预置企业知识库向量库（DeterministicEmbeddings，离线可复现）。"""
     from langchain_core.documents import Document
