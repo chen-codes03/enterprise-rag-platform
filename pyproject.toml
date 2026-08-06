@@ -1,0 +1,23 @@
+[project]
+name = "enterprise-rag-platform"
+version = "0.1.0"
+description = "企业知识库 RAG 智能问答平台"
+requires-python = ">=3.11"
+readme = "README.md"
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-ra --strict-markers"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["app/evaluation/runner.py"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 70
