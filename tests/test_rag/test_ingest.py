@@ -48,3 +48,24 @@ def test_ingest_preserves_source_metadata(tmp_path, tmp_chroma_dir):
     results = store.similarity_search("考勤", k=3)
     for r in results:
         assert r.metadata["source"] == str(md)
+
+
+def test_ingest_file_source_name_overrides_path(tmp_path, tmp_chroma_dir):
+    """ingest_file 传入 source_name 时，metadata.source 应为 source_name 而非临时路径。
+
+    模拟上传场景：文件先落盘到临时路径，但溯源来源应显示为原始文件名。
+    """
+    from app.rag.ingest import ingest_file
+
+    md = tmp_path / "tmp_abc123.md"
+    md.write_text("# 报销制度\n\n报销需附发票，经部门经理审批。" * 10, encoding="utf-8")
+    store = _store(tmp_chroma_dir, "ingest_source_name")
+    ingest_file(
+        md, store=store, chunk_size=80, chunk_overlap=10, source_name="报销制度.md"
+    )
+
+    results = store.similarity_search("报销", k=3)
+    assert len(results) >= 1
+    for r in results:
+        assert r.metadata["source"] == "报销制度.md"
+        assert "tmp_abc123" not in r.metadata["source"]

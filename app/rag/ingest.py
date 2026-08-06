@@ -32,7 +32,15 @@ def ingest_file(
     store: Chroma | None = None,
     chunk_size: int | None = None,
     chunk_overlap: int | None = None,
+    source_name: str | None = None,
 ) -> int:
-    """解析单个文件并入库，返回入库块数。"""
+    """解析单个文件并入库，返回入库块数。
+
+    source_name：可选的原始文件名，用于覆盖 metadata.source，
+    避免上传场景下溯源来源显示为临时文件路径。未提供时沿用 path。
+    """
     documents = load_document(path)
+    if source_name:
+        for doc in documents:
+            doc.metadata["source"] = source_name
     return ingest_documents(documents, store, chunk_size, chunk_overlap)

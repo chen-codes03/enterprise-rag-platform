@@ -8,12 +8,14 @@ from __future__ import annotations
 from app.config import Settings, get_settings
 from app.models.base import ModelProvider
 from app.models.deepseek import DeepSeekProvider
+from app.models.fake import FakeProvider
 from app.models.qwen import QwenProvider
 
 # provider 注册表，便于扩展新模型
 _PROVIDERS: dict[str, type] = {
     "deepseek": DeepSeekProvider,
     "qwen": QwenProvider,
+    "fake": FakeProvider,
 }
 
 

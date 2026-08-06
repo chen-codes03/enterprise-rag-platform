@@ -1,0 +1,62 @@
+[
+  {
+    "question": "如何报销费用？",
+    "reference_answer": "在OA系统提交报销单并附发票，经部门经理审批后交财务打款",
+    "relevant_sources": ["财务制度.md"]
+  },
+  {
+    "question": "请假流程是怎样的？",
+    "reference_answer": "在考勤系统提交请假申请，3天以内由直属主管审批，3天以上需HR审批",
+    "relevant_sources": ["考勤制度.md"]
+  },
+  {
+    "question": "新员工入职第一天要做什么？",
+    "reference_answer": "到HR领取工牌、办理门禁卡，由IT开通邮箱与系统账号",
+    "relevant_sources": ["入职指南.md"]
+  },
+  {
+    "question": "服务器怎么部署？",
+    "reference_answer": "编写Dockerfile构建镜像，使用docker compose编排app与redis服务一键启动",
+    "relevant_sources": ["部署文档.md"]
+  },
+  {
+    "question": "报销需要附什么材料？",
+    "reference_answer": "报销需附发票，在OA系统提交报销单",
+    "relevant_sources": ["财务制度.md"]
+  },
+  {
+    "question": "请假超过3天由谁审批？",
+    "reference_answer": "请假超过3天需HR审批",
+    "relevant_sources": ["考勤制度.md"]
+  },
+  {
+    "question": "新员工如何获得邮箱账号？",
+    "reference_answer": "由IT开通邮箱与系统账号",
+    "relevant_sources": ["入职指南.md"]
+  },
+  {
+    "question": "部署时如何编排多个服务？",
+    "reference_answer": "使用docker compose编排app与redis服务",
+    "relevant_sources": ["部署文档.md"]
+  },
+  {
+    "question": "报销审批流程涉及哪些角色？",
+    "reference_answer": "部门经理审批，财务打款",
+    "relevant_sources": ["财务制度.md"]
+  },
+  {
+    "question": "入职需要领取什么证件？",
+    "reference_answer": "到HR领取工牌、办理门禁卡",
+    "relevant_sources": ["入职指南.md"]
+  },
+  {
+    "question": "考勤系统用于做什么？",
+    "reference_answer": "在考勤系统提交请假申请",
+    "relevant_sources": ["考勤制度.md"]
+  },
+  {
+    "question": "镜像如何构建？",
+    "reference_answer": "编写Dockerfile构建镜像",
+    "relevant_sources": ["部署文档.md"]
+  }
+]

@@ -21,6 +21,14 @@ def get_store():
     return get_vectorstore()
 
 
+def get_qa_cache():
+    """问答缓存依赖（生产用，测试中覆盖）。"""
+    from app.cache.qa_cache import QACache
+    from app.cache.redis_client import get_redis_client
+
+    return QACache(get_redis_client())
+
+
 def get_rag_chain():
     """RAG 链路依赖（生产用，测试中覆盖）。
 
