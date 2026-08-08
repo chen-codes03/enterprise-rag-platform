@@ -6,21 +6,34 @@ store / model provider / qa_cache 通过 lru_cache 单例化，避免每次请�
 """
 from __future__ import annotations
 
+import secrets
 from functools import lru_cache
 
-from fastapi import Header, HTTPException
+from fastapi import Header, HTTPException, Query
 
 from app.config import get_settings
 
 
 def verify_api_key(
-    x_api_key: str | None = Header(default=None, alias="X-API-Key")
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+    api_key: str | None = Query(default=None),
 ) -> str:
-    """API Key 鉴权。缺失或无效返回 401。"""
+    """API Key 鉴权。缺失或无效返回 401。
+
+    支持两种传递方式：
+      - Header: X-API-Key（常规 axios 请求）
+      - Query : api_key（iframe / <img> / <a> 等无法自定义 Header 的场景）
+
+    使用 secrets.compare_digest 做常量时间比较，规避时序攻击。
+    """
     settings = get_settings()
-    if not x_api_key or x_api_key != settings.api_key:
+    provided = x_api_key or api_key
+    if not provided:
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
-    return x_api_key
+    # 常量时间比较，防止通过响应耗时差异逐字节爆破 API Key
+    if not secrets.compare_digest(provided, settings.api_key):
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+    return provided
 
 
 @lru_cache

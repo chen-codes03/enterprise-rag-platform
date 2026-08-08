@@ -13,6 +13,12 @@ dist/
 *.egg-info/
 .eggs/
 
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+*.log
+
 # Testing
 .pytest_cache/
 .coverage
@@ -31,11 +37,22 @@ data/docs/*
 !data/docs/.gitkeep
 data/fixtures/*
 !data/fixtures/.gitkeep
+# 用户上传的原始文档（运行时数据，不入库）
+data/uploads/*
+!data/uploads/.gitkeep
+# 对话历史数据库（运行时数据，不入库）
+data/chat_history.db
+
+# 后端本地运行产生的数据与测试文件（不入库）
+backend/data/
+backend/downloaded_test.md
+backend/test_doc.md
 
 # IDE
 .vscode/
 .idea/
 *.swp
+*.tsbuildinfo
 
 # OS
 .DS_Store

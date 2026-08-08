@@ -8,6 +8,9 @@ from functools import lru_cache
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# 演示用默认密钥（生产必须覆盖）。单独定义为常量便于统一引用与启动期检测。
+DEFAULT_API_KEY = "sk-rag-demo-key-change-me"
+
 
 class Settings(BaseSettings):
     """全局配置。环境变量名不区分大小写，对应字段名。"""
@@ -26,7 +29,8 @@ class Settings(BaseSettings):
     app_port: int = 8000
 
     # ===== 鉴权 =====
-    api_key: str = "sk-rag-demo-key-change-me"
+    # 演示用默认密钥；生产环境务必通过环境变量 API_KEY 覆盖为强随机值
+    api_key: str = DEFAULT_API_KEY
 
     # ===== 模型层 =====
     model_provider: str = "deepseek"  # deepseek | qwen
@@ -51,16 +55,27 @@ class Settings(BaseSettings):
     # ===== RAG =====
     chunk_size: int = 500
     chunk_overlap: int = 50
-    retrieve_top_k: int = 4
+    retrieve_top_k: int = 4          # 最终喂给 LLM 的文档数
+    rerank_enabled: bool = True      # 是否启用 LLM 重排序
+    rerank_top_n: int = 10           # 向量检索召回数（重排序候选）
 
     # ===== 向量库 =====
     chroma_persist_dir: str = "data/chroma"
     chroma_collection: str = "enterprise_kb"
 
+    # ===== 原始文件持久化 =====
+    # 上传的原始文件保存在此目录，供下载/在线预览使用
+    uploads_dir: str = "data/uploads"
+
     # ===== Redis 缓存 =====
     redis_url: str = "redis://localhost:6379/0"
     qa_cache_ttl: int = 3600
     embedding_cache_ttl: int = 86400
+
+    @property
+    def is_default_api_key(self) -> bool:
+        """是否仍在使用演示默认密钥（生产环境应为 False）。"""
+        return self.api_key == DEFAULT_API_KEY
 
 
 @lru_cache

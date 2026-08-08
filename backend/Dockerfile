@@ -16,7 +16,6 @@ COPY --from=builder /install /usr/local
 
 # 拷贝应用代码
 COPY app ./app
-COPY README.md GOAL.md PLAN.md ./
 
 ENV PYTHONUNBUFFERED=1
 ENV APP_HOST=0.0.0.0

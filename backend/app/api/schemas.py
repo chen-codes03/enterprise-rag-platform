@@ -32,3 +32,10 @@ class DocumentUploadResponse(BaseModel):
 
     filename: str
     chunks: int
+
+
+class DocumentDeleteResponse(BaseModel):
+    """文档删除响应。"""
+
+    filename: str
+    deleted_chunks: int

@@ -3,7 +3,33 @@
 基于 **RAG 检索增强生成**的企业知识管理与智能问答平台，让 AI 能"读懂"企业私有文档（PDF/Word/Markdown）并准确回答业务问题，支撑智能客服、知识助手等场景。
 
 ## 技术栈
-Python · FastAPI · LangChain · Chroma 向量库 · Redis · Docker
+
+| 层 | 技术 |
+|---|---|
+| 前端 | **Vue 3** + Vite + Pinia + Axios（前后端分离） |
+| 后端 | **Python** · **FastAPI** · LangChain |
+| AI | **Chroma** 向量库 · Redis 缓存 · DeepSeek/豆包 |
+| 部署 | **Docker Compose** · Nginx |
+
+## 架构
+
+```
+┌──────────────────┐  HTTP/JSON   ┌──────────────────┐
+│                  │  /api/v1/*   │                  │
+│  Vue 3 前端      │ ───────────> │  FastAPI 后端     │
+│  (Nginx 托管)    │  /health     │  (Python)        │
+│                  │  <────────── │                  │
+└──────────────────┘  响应数据    └────────┬─────────┘
+                                           │
+                                     ┌─────▼─────┐
+                                     │  Chroma + │
+                                     │  Redis    │
+                                     └───────────┘
+```
+
+- **前端**：独立项目，Nginx 托管静态文件，通过反向代理转发 API 请求到后端
+- **后端**：纯 API 服务，提供 RAG 链路、文档管理、问答接口
+- **通信**：前端通过 Axios 调用后端 RESTful API，支持 CORS 跨域
 
 ## 核心能力
 - **统一模型调用层**：封装 DeepSeek / 通义千问（均兼容 OpenAI 接口），支持同步 / 异步 / SSE 流式输出，改配置即可切换模型
@@ -15,40 +41,38 @@ Python · FastAPI · LangChain · Chroma 向量库 · Redis · Docker
 
 ## 快速开始
 
-### 方式一：Docker 一键启动（推荐，开箱即用）
-默认使用 `fake` 离线模式，无需任何大模型 API key 即可完整体验上传文档 → 问答全链路。
+### 方式一：Docker 一键启动（推荐）
 
 ```bash
-docker compose up -d              # 启动 app(8010) + redis(6380)
-# 健康检查
-curl http://localhost:8010/health
+docker compose up -d
 ```
 
-接入真实大模型：编辑 `docker-compose.yml` 中 app 服务的环境变量
-```
-MODEL_PROVIDER=deepseek
-DEEPSEEK_API_KEY=sk-xxx
-EMBEDDING_PROVIDER=openai
-EMBEDDING_API_KEY=sk-xxx
-```
+服务启动后：
+- **前端界面**：http://localhost:8080
+- **后端 API**：http://localhost:8000
+- **API 文档**：http://localhost:8000/docs
+- **健康检查**：http://localhost:8000/health
 
-### 方式二：本地开发
+默认使用 `fake` 离线模式，无需任何大模型 API key 即可完整体验。
+
+### 方式二：本地开发（前后端分别启动）
+
 ```bash
-# 1. 创建虚拟环境并安装依赖
+# 1. 后端
+cd backend
 python -m venv .venv
 .venv\Scripts\activate          # Windows
-# source .venv/bin/activate     # Linux/Mac
 pip install -r requirements.txt
+cp .env.example .env            # 填入 API Key
+uvicorn app.main:app --reload   # http://localhost:8000
 
-# 2. 配置环境变量
-cp .env.example .env            # 并填入你的 API Key（或使用 fake 模式离线体验）
-
-# 3. 运行测试
-pytest
-
-# 4. 启动服务
-uvicorn app.main:app --reload
+# 2. 前端（新终端）
+cd frontend
+npm install                     # 安装依赖
+npm run dev                     # http://localhost:5173
 ```
+
+前端 Vite 已配置代理，`/api/*` 和 `/health` 请求会自动转发到后端 `localhost:8000`。
 
 ## API 说明
 
@@ -64,18 +88,18 @@ uvicorn app.main:app --reload
 ### 请求示例
 ```bash
 # 上传文档
-curl -X POST http://localhost:8010/api/v1/documents/upload \
+curl -X POST http://localhost:8000/api/v1/documents/upload \
   -H "X-API-Key: sk-rag-demo-key-change-me" \
   -F "file=@data/docs/财务制度.md"
 
 # 同步问答
-curl -X POST http://localhost:8010/api/v1/chat \
+curl -X POST http://localhost:8000/api/v1/chat \
   -H "X-API-Key: sk-rag-demo-key-change-me" \
   -H "Content-Type: application/json" \
   -d '{"question": "如何报销费用？"}'
 
 # SSE 流式问答
-curl -N -X POST http://localhost:8010/api/v1/chat/stream \
+curl -N -X POST http://localhost:8000/api/v1/chat/stream \
   -H "X-API-Key: sk-rag-demo-key-change-me" \
   -H "Content-Type: application/json" \
   -d '{"question": "报销需要附什么材料？"}'
@@ -111,20 +135,39 @@ improvement: +1.0   （RAG 显著优于无 RAG 基线）
 
 ## 项目结构
 ```
-app/
-├── config.py          配置管理（pydantic-settings）
-├── core/              日志、异常
-├── models/            统一模型调用层（DeepSeek/Qwen/Fake，同步/异步/SSE）
-├── rag/               文档解析、分块、Embedding、向量库、检索、RAG链路
-├── cache/             Redis 缓存（问答结果/向量，TTL+主动失效）
-├── api/               FastAPI 路由、鉴权、Schemas
-└── evaluation/        评估指标、数据集、运行器
-scripts/               评估演示、部署验证脚本
-tests/                 单元/集成测试（144 项，全程 TDD）
+enterprise-rag-platform/
+├── backend/              # 后端（Python / FastAPI）
+│   ├── app/
+│   │   ├── config.py      # 配置管理
+│   │   ├── main.py        # 应用入口 + CORS
+│   │   ├── api/           # API 路由、鉴权
+│   │   ├── rag/           # RAG 链路
+│   │   ├── models/        # 模型调用层
+│   │   ├── cache/         # Redis 缓存
+│   │   └── evaluation/    # 评估体系
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── pyproject.toml
+├── frontend/             # 前端（Vue 3 / Vite）
+│   ├── src/
+│   │   ├── App.vue        # 主组件
+│   │   ├── api/index.js   # Axios 封装
+│   │   └── stores/chat.js # Pinia 状态
+│   ├── nginx.conf         # Nginx 配置
+│   ├── Dockerfile
+│   ├── vite.config.js
+│   └── package.json
+├── tests/                 # 测试（144 项）
+├── scripts/               # 脚本
+├── data/                  # 数据
+├── docker-compose.yml    # 编排三服务
+├── .env.example
+└── README.md
 ```
 
 ## 测试
 ```bash
+cd backend
 pytest                  # 全量测试
 pytest --cov=app        # 带覆盖率
 ```

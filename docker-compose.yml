@@ -1,8 +1,9 @@
 services:
+  # ===== Redis 缓存 =====
   redis:
     image: redis:7-alpine
     ports:
-      - "6380:6379"  # 避免与本机 6379 冲突
+      - "6380:6379"
     volumes:
       - redis-data:/data
     healthcheck:
@@ -11,17 +12,17 @@ services:
       timeout: 3s
       retries: 5
 
-  app:
-    build: .
+  # ===== 后端 API（Python + FastAPI）=====
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     ports:
-      - "8010:8000"  # 避免与本机 8000 冲突
+      - "8000:8000"
     env_file:
-      - .env  # 从 .env 文件加载真实大模型 API key 等配置（.env 已被 .gitignore 忽略）
+      - .env
     environment:
-      # ===== Embedding / 大模型：由 .env 控制；无 .env 时默认 fake 演示模式 =====
-      # ===== 鉴权（演示用，生产请通过 .env 注入强密钥）=====
       - API_KEY=sk-rag-demo-key-change-me
-      # ===== 基础设施 =====
       - REDIS_URL=redis://redis:6379/0
       - CHROMA_PERSIST_DIR=data/chroma
       - CHROMA_COLLECTION=enterprise_kb
@@ -31,6 +32,17 @@ services:
         condition: service_healthy
     volumes:
       - ./data:/app/data
+    restart: unless-stopped
+
+  # ===== 前端（Vue 3 + Nginx）=====
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
     restart: unless-stopped
 
 volumes:

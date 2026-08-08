@@ -1,7 +1,4 @@
-"""健康检查路由。
-
-检查应用及关键依赖（Redis、Chroma 向量库）的连通性，返回结构化状态。
-"""
+"""健康检查路由。"""
 from fastapi import APIRouter, Depends
 
 from app.api.deps import get_redis_dep, get_store
@@ -11,6 +8,8 @@ router = APIRouter(tags=["health"])
 
 
 def _check_redis(client) -> str:
+    if client is None:
+        return "mem"  # 内存降级模式
     try:
         client.ping()
         return "ok"
@@ -20,7 +19,6 @@ def _check_redis(client) -> str:
 
 def _check_chroma(store) -> str:
     try:
-        # get 不需要 embedding，轻量探测向量库可用性
         store.get(limit=1)
         return "ok"
     except Exception:
@@ -32,13 +30,15 @@ def health(
     redis_client=Depends(get_redis_dep),
     store=Depends(get_store),
 ) -> dict:
-    """健康检查：返回应用状态与 redis/chroma 依赖状态。"""
+    """健康检查。Redis 不可用时自动降级为内存模式，不影响主功能。"""
     settings = get_settings()
+    redis_status = _check_redis(redis_client)
     deps_status = {
-        "redis": _check_redis(redis_client),
+        "redis": redis_status,
         "chroma": _check_chroma(store),
     }
-    overall = "ok" if all(v == "ok" for v in deps_status.values()) else "degraded"
+    # Redis 内存降级不算异常
+    overall = "ok" if all(v in ("ok", "mem") for v in deps_status.values()) else "degraded"
     return {
         "status": overall,
         "app": settings.app_name,

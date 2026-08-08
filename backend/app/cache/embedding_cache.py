@@ -1,12 +1,9 @@
-"""Embedding 向量缓存。
-
-缓存文本到向量的计算结果，避免重复调用 Embedding API，降低成本（G4）。
-通过 CachedEmbeddings 装饰 LangChain Embeddings 接口，对上层透明。
-"""
+"""Embedding 向量缓存。"""
 from __future__ import annotations
 
 import hashlib
 import json
+import time
 
 import redis
 from langchain_core.embeddings import Embeddings
@@ -15,15 +12,11 @@ from app.config import get_settings
 
 
 class EmbeddingCache:
-    """Embedding 向量缓存。
-
-    model_id 用于隔离不同 embedding 模型（维度不同）的缓存，避免切换模型后
-    命中错误维度的旧向量。未指定时退化为不带 model_id 的 key（向后兼容）。
-    """
+    """Embedding 向量缓存。Redis 不可用时自动降级为内存缓存。"""
 
     def __init__(
         self,
-        client: redis.Redis,
+        client: redis.Redis | None,
         ttl: int | None = None,
         prefix: str = "emb",
         model_id: str = "",
@@ -32,6 +25,7 @@ class EmbeddingCache:
         self.ttl = ttl or get_settings().embedding_cache_ttl
         self.prefix = prefix
         self.model_id = model_id
+        self._mem_cache: dict[str, tuple[str, float]] = {}
 
     def _key(self, text: str) -> str:
         h = hashlib.sha256(text.encode("utf-8")).hexdigest()
@@ -40,15 +34,32 @@ class EmbeddingCache:
         return f"{self.prefix}:{h}"
 
     def get(self, text: str) -> list[float] | None:
-        val = self.client.get(self._key(text))
+        key = self._key(text)
+        if self.client is None:
+            val = self._mem_cache.get(key)
+            if val and time.time() < val[1]:
+                return json.loads(val[0])
+            self._mem_cache.pop(key, None)
+            return None
+        val = self.client.get(key)
         if val is None:
             return None
         return json.loads(val)
 
     def set(self, text: str, vector: list[float], ttl: int | None = None) -> None:
-        self.client.setex(self._key(text), ttl or self.ttl, json.dumps(vector))
+        key = self._key(text)
+        val = json.dumps(vector)
+        ttl_val = ttl or self.ttl
+        if self.client is None:
+            self._mem_cache[key] = (val, time.time() + ttl_val)
+            return
+        self.client.setex(key, ttl_val, val)
 
     def invalidate_all(self) -> int:
+        if self.client is None:
+            count = len(self._mem_cache)
+            self._mem_cache.clear()
+            return count
         deleted = 0
         for key in self.client.scan_iter(f"{self.prefix}:*"):
             self.client.delete(key)

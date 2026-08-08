@@ -18,6 +18,7 @@ from app.config import get_settings
 from app.models.base import ModelProvider
 from app.rag.context import build_context, build_sources
 from app.rag.prompts import get_rag_prompt
+from app.rag.reranker import rerank
 from app.rag.retriever import retrieve
 
 
@@ -51,8 +52,22 @@ class RAGChain:
         )
 
     def retrieve(self, query: str) -> list[Document]:
-        """语义检索（公开，便于上层获取来源）。"""
-        return retrieve(self.store, query, k=self.top_k)
+        """语义检索（公开，便于上层获取来源）。
+
+        启用重排序时：向量检索召回 top_n 候选 → LLM 打分 → 取 top_k。
+        未启用时：直接向量检索 top_k。
+        """
+        settings = get_settings()
+        if not settings.rerank_enabled:
+            return retrieve(self.store, query, k=self.top_k)
+
+        # 向量检索召回更多候选用于重排序
+        candidates = retrieve(self.store, query, k=settings.rerank_top_n)
+        if len(candidates) <= self.top_k:
+            return candidates
+
+        # LLM 打分重排序
+        return rerank(query, candidates, self.model_provider, top_k=self.top_k)
 
     def ask(self, query: str) -> RAGAnswer:
         """同步问答。命中缓存则直接返回，否则计算并回填缓存。"""
