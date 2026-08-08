@@ -258,18 +258,38 @@
     </div>
 
     <!-- ===== 设置弹窗 ===== -->
-    <div class="modal-overlay" v-if="showSettings" @click.self="showSettings = false">
+    <div class="modal-overlay" v-if="showSettings" @click.self="closeSettings">
       <div class="modal">
         <div class="modal-header">
           <h3>设置</h3>
-          <button class="close-btn" @click="showSettings = false">
+          <button class="close-btn" @click="closeSettings">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
         <div class="modal-body">
           <div class="form-group">
             <label>API Key</label>
-            <input type="password" v-model="apiKey" @change="saveApiKey" placeholder="输入访问密钥" />
+            <div class="input-with-icon">
+              <input 
+                :type="showApiKey ? 'text' : 'password'" 
+                v-model="apiKey" 
+                @change="saveApiKey" 
+                placeholder="输入访问密钥" 
+              />
+              <button 
+                type="button" 
+                class="toggle-password" 
+                @click="showApiKey = !showApiKey" 
+                :title="showApiKey ? '隐藏密码' : '显示密码'"
+              >
+                <template v-if="!showApiKey">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </template>
+                <template v-else>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </template>
+              </button>
+            </div>
             <p class="form-hint">用于接口鉴权，默认已填入演示密钥</p>
           </div>
         </div>
@@ -330,6 +350,7 @@ const messagesContainer = ref(null)
 const isDragging = ref(false)
 const uploading = ref('')
 const apiKey = ref(localStorage.getItem('apiKey') || 'sk-rag-demo-key-change-me')
+const showApiKey = ref(false)
 const showSettings = ref(false)
 const sidebarCollapsed = ref(false)
 const expandedSources = ref(new Set())
@@ -430,6 +451,11 @@ function fileType(name) {
 function saveApiKey() {
   apiService.setApiKey(apiKey.value)
   showToast('设置已保存', 'success')
+}
+
+function closeSettings() {
+  showSettings.value = false
+  showApiKey.value = false
 }
 
 function toggleSource(idx) {
@@ -1971,6 +1997,42 @@ onMounted(async () => {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-with-icon input {
+  width: 100%;
+  padding-right: 44px;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--text-lighter);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.toggle-password:hover {
+  background: var(--bg-soft);
+  color: var(--primary);
+}
+
+.toggle-password svg {
+  width: 18px;
+  height: 18px;
 }
 
 .form-hint {

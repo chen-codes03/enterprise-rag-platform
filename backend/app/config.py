@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     app_env: str = "dev"
     app_host: str = "0.0.0.0"
     app_port: int = 8000
+    # CORS 允许的前端来源（逗号分隔，如 "http://localhost:8080,https://app.example.com"）
+    cors_origins: str = "http://localhost:8080"
 
     # ===== 鉴权 =====
     # 演示用默认密钥；生产环境务必通过环境变量 API_KEY 覆盖为强随机值
@@ -76,6 +78,11 @@ class Settings(BaseSettings):
     def is_default_api_key(self) -> bool:
         """是否仍在使用演示默认密钥（生产环境应为 False）。"""
         return self.api_key == DEFAULT_API_KEY
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """将逗号分隔的 CORS 来源字符串解析为列表。"""
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
 
 @lru_cache

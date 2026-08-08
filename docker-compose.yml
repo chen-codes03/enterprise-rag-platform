@@ -2,8 +2,7 @@ services:
   # ===== Redis 缓存 =====
   redis:
     image: redis:7-alpine
-    ports:
-      - "6380:6379"
+    # 不对外暴露端口，仅 backend 容器内部网络访问
     volumes:
       - redis-data:/data
     healthcheck:
@@ -22,7 +21,6 @@ services:
     env_file:
       - .env
     environment:
-      - API_KEY=sk-rag-demo-key-change-me
       - REDIS_URL=redis://redis:6379/0
       - CHROMA_PERSIST_DIR=data/chroma
       - CHROMA_COLLECTION=enterprise_kb

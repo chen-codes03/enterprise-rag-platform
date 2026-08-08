@@ -20,9 +20,11 @@ def create_app() -> FastAPI:
     )
 
     # CORS 跨域支持（前后端分离模式下允许前端独立部署访问）
+    # 明确指定允许的前端来源，避免 allow_origins=["*"] + allow_credentials=True
+    # 这一浏览器规范明确拒绝的不安全组合。
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=settings.cors_origins_list,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
